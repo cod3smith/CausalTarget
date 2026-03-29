@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CausalTarget Report — {{ disease }}</title>
+<style>
+  :root {
+    --navy: #0D1B2A;
+    --navy-light: #1B2838;
+    --teal: #00D4AA;
+    --teal-dark: #00B894;
+    --bg: #f8f9fa;
+    --card-bg: #ffffff;
+    --text: #333;
+    --text-muted: #666;
+    --border: #e9ecef;
+    --success: #00D4AA;
+    --warning: #f0ad4e;
+    --danger: #ff6b6b;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
+    color: #fff;
+    padding: 3rem 2rem;
+    text-align: center;
+  }
+  .header h1 {
+    color: var(--teal);
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+  }
+  .header .subtitle {
+    font-size: 1.2rem;
+    opacity: 0.8;
+  }
+  .header .meta {
+    margin-top: 1rem;
+    font-size: 0.9rem;
+    opacity: 0.6;
+  }
+
+  /* Container */
+  .container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1.5rem;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+    padding: 2rem;
+    margin-bottom: 2rem;
+  }
+  .card h2 {
+    color: var(--navy);
+    font-size: 1.4rem;
+    margin-bottom: 1.2rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 3px solid var(--teal);
+  }
+
+  /* Stats Grid */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .stat {
+    background: var(--navy);
+    color: #fff;
+    padding: 1.25rem;
+    border-radius: 10px;
+    text-align: center;
+    transition: transform 0.2s;
+  }
+  .stat:hover { transform: translateY(-2px); }
+  .stat .value {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--teal);
+    line-height: 1.2;
+  }
+  .stat .label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.8;
+    margin-top: 0.25rem;
+  }
+
+  /* Tables */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+  thead th {
+    background: var(--navy);
+    color: #fff;
+    padding: 0.85rem 1rem;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  tbody td {
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody tr:hover { background: #f1f3f5; }
+
+  /* Badges */
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #fff;
+  }
+  .badge-causal { background: var(--success); }
+  .badge-correlational { background: var(--danger); }
+  .badge-inconclusive { background: var(--warning); color: #333; }
+
+  /* Reasoning text */
+  .reasoning {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+    padding: 0.75rem;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border-left: 3px solid var(--teal);
+  }
+
+  /* Score bar */
+  .score-bar {
+    height: 8px;
+    background: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+    min-width: 80px;
+  }
+  .score-bar .fill {
+    height: 100%;
+    background: var(--teal);
+    border-radius: 4px;
+    transition: width 0.5s;
+  }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding: 2rem;
+    color: #999;
+    font-size: 0.85rem;
+    border-top: 1px solid var(--border);
+    margin-top: 2rem;
+  }
+
+  /* SMILES */
+  .smiles {
+    font-family: 'Fira Code', 'Consolas', monospace;
+    font-size: 0.8rem;
+    word-break: break-all;
+  }
+
+  /* Methodology list */
+  .method-list {
+    margin: 1rem 0 0 1.5rem;
+    line-height: 2;
+  }
+  .method-list li { margin-bottom: 0.25rem; }
+
+  /* Sources */
+  .source-tags {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+  }
+  .source-tag {
+    background: var(--navy);
+    color: var(--teal);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🧬 CausalTarget Report</h1>
+  <div class="subtitle">{{ disease }}</div>
+  <div class="meta">Generated {{ timestamp }}</div>
+</div>
+
+<div class="container">
+
+  <!-- Executive Summary -->
+  <div class="card">
+    <h2>Executive Summary</h2>
+    <div class="stats">
+      <div class="stat">
+        <div class="value">{{ graph.n_nodes }}</div>
+        <div class="label">Graph Nodes</div>
+      </div>
+      <div class="stat">
+        <div class="value">{{ graph.n_edges }}</div>
+        <div class="label">Graph Edges</div>
+      </div>
+      <div class="stat">
+        <div class="value">{{ graph.n_genes }}</div>
+        <div class="label">Genes</div>
+      </div>
+      <div class="stat">
+        <div class="value">{{ graph.n_pathways }}</div>
+        <div class="label">Pathways</div>
+      </div>
+      <div class="stat">
+        <div class="value">{{ targets.n_causal }}</div>
+        <div class="label">Causal Targets</div>
+      </div>
+      <div class="stat">
+        <div class="value">{{ targets.n_correlational }}</div>
+        <div class="label">Correlational</div>
+      </div>
+      <div class="stat">
+        <div class="value">{{ candidates.total }}</div>
+        <div class="label">Candidates</div>
+      </div>
+      <div class="stat">
+        <div class="value">{{ candidates.n_drug_like }}</div>
+        <div class="label">Drug-Like</div>
+      </div>
+    </div>
+    <div class="source-tags">
+      {% for src in graph.sources %}
+      <span class="source-tag">{{ src }}</span>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Causal Targets -->
+  <div class="card">
+    <h2>Causal Target Analysis</h2>
+    <p style="color:var(--text-muted);margin-bottom:1rem">
+      Targets evaluated using Pearl's do-calculus via the backdoor criterion,
+      effect estimation, and sensitivity analysis.
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>Gene</th>
+          <th>Protein</th>
+          <th>Classification</th>
+          <th>Causal Confidence</th>
+          <th>Robustness</th>
+          <th>Druggability</th>
+          <th>Pathways</th>
+          <th>PPIs</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in targets.items %}
+        <tr>
+          <td><strong>{{ t.gene_name }}</strong></td>
+          <td>{{ t.protein_name }}</td>
+          <td>
+            {% if t.is_causal %}
+            <span class="badge badge-causal">CAUSAL</span>
+            {% elif t.classification == 'correlational' %}
+            <span class="badge badge-correlational">CORRELATIONAL</span>
+            {% else %}
+            <span class="badge badge-inconclusive">INCONCLUSIVE</span>
+            {% endif %}
+          </td>
+          <td>
+            <div>{{ "%.3f"|format(t.causal_confidence) }}</div>
+            <div class="score-bar">
+              <div class="fill" style="width:{{ (t.causal_confidence * 100)|int }}%"></div>
+            </div>
+          </td>
+          <td>{{ "%.3f"|format(t.robustness) }}</td>
+          <td>{{ "%.3f"|format(t.druggability) }}</td>
+          <td>{{ t.n_pathways }}</td>
+          <td>{{ t.n_interactions }}</td>
+        </tr>
+        {% if t.reasoning %}
+        <tr>
+          <td colspan="8">
+            <div class="reasoning">{{ t.reasoning }}</div>
+          </td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Top Candidates -->
+  <div class="card">
+    <h2>Top Drug Candidates</h2>
+    <p style="color:var(--text-muted);margin-bottom:1rem">
+      Ranked by composite score: causal confidence (0.30) + binding (0.25) +
+      QED (0.15) + SA (0.10) + ADMET (0.10) + novelty (0.10).
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>SMILES</th>
+          <th>Target</th>
+          <th>Composite</th>
+          <th>Causal</th>
+          <th>Binding</th>
+          <th>QED</th>
+          <th>MW</th>
+          <th>Drug-Like</th>
+          <th>Novel</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for c in candidates.items %}
+        <tr>
+          <td>{{ c.rank }}</td>
+          <td class="smiles">{{ c.smiles[:45] }}{% if c.smiles|length > 45 %}…{% endif %}</td>
+          <td>{{ c.target }}</td>
+          <td>
+            <strong>{{ "%.4f"|format(c.composite) }}</strong>
+            <div class="score-bar">
+              <div class="fill" style="width:{{ (c.composite * 100)|int }}%"></div>
+            </div>
+          </td>
+          <td>{{ "%.3f"|format(c.causal_conf) }}</td>
+          <td>{% if c.binding %}{{ "%.1f"|format(c.binding) }}{% else %}N/A{% endif %}</td>
+          <td>{% if c.qed %}{{ "%.2f"|format(c.qed) }}{% else %}N/A{% endif %}</td>
+          <td>{% if c.mw %}{{ "%.0f"|format(c.mw) }}{% else %}—{% endif %}</td>
+          <td>{% if c.is_drug_like %}✓{% else %}✗{% endif %}</td>
+          <td>{% if c.is_novel %}✓{% else %}✗{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Methodology -->
+  <div class="card">
+    <h2>Methodology</h2>
+    <p>CausalTarget applies <strong>Pearl's do-calculus</strong> to
+    distinguish genuine causal drug targets from correlational bystanders.
+    Unlike conventional pipelines that rank by association scores alone,
+    CausalTarget asks: <em>"If we intervene on this protein, does it
+    causally affect the disease outcome?"</em></p>
+
+    <ol class="method-list">
+      <li><strong>Knowledge Graph Assembly</strong> — Disease causal graph
+          built from 7 biomedical databases (DisGeNET, Open Targets, KEGG,
+          Reactome, STRING, UniProt, PDB).</li>
+      <li><strong>Causal Identification</strong> — Backdoor criterion
+          applied to test identifiability of causal effects.</li>
+      <li><strong>Effect Estimation</strong> — Average treatment effect
+          estimated via DoWhy (linear regression + IPW).</li>
+      <li><strong>Sensitivity Analysis</strong> — Robustness validated
+          through random common cause, placebo treatment, and data subset
+          refutation tests.</li>
+      <li><strong>Molecule Generation</strong> — Novel candidates generated
+          by GenMol (Variational Autoencoder trained on ChEMBL).</li>
+      <li><strong>Drug Screening</strong> — Candidates screened for
+          drug-likeness (MolScreen) and binding affinity (DockBot).</li>
+      <li><strong>Composite Scoring</strong> — Six-dimensional ranking
+          with causal confidence weighted highest (0.30).</li>
+    </ol>
+  </div>
+
+</div>
+
+<div class="footer">
+  Generated by <strong>CausalTarget</strong> &middot; NeoForge Bio-AI Platform<br>
+  <em>"Correlation is not causation — CausalTarget knows the difference."</em>
+</div>
+
+</body>
+</html>
