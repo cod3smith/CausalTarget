@@ -1,9 +1,41 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "causaltarget"
 version = "0.1.0"
-description = "Add your description here"
+description = "Causal drug target discovery via Pearl's do-calculus — distinguishes genuine causal targets from correlational bystanders"
 readme = "README.md"
+license = "MIT"
 requires-python = ">=3.13"
+authors = [
+    { name = "NeoForge Bio-AI Platform" },
+]
+keywords = [
+    "causal-inference",
+    "drug-discovery",
+    "do-calculus",
+    "knowledge-graph",
+    "bioinformatics",
+    "cheminformatics",
+    "pearl",
+    "target-identification",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Healthcare Industry",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "Topic :: Scientific/Engineering :: Chemistry",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+    "Typing :: Typed",
+]
 dependencies = [
     "biopython>=1.85",
     "chembl-webresource-client>=0.10.9",
@@ -11,6 +43,7 @@ dependencies = [
     "fastapi[standard]>=0.135.2",
     "matplotlib>=3.10",
     "meeko>=0.6",
+    "gemmi>=0.7",
     "notebook>=7.5.5",
     "numpy>=2.0",
     "pandas>=3.0.1",
@@ -32,7 +65,17 @@ dependencies = [
     "stable-baselines3>=2.7.1",
     "jinja2>=3.1",
     "pyvis>=0.3",
+    "rich>=13.0",
+    "psycopg2-binary>=2.9",
+    "redis>=5.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/NeoForge/CausalTarget"
+Documentation = "https://github.com/NeoForge/CausalTarget#readme"
+Repository = "https://github.com/NeoForge/CausalTarget"
+Issues = "https://github.com/NeoForge/CausalTarget/issues"
+Changelog = "https://github.com/NeoForge/CausalTarget/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 docking = ["vina>=1.2"]
@@ -45,6 +88,23 @@ genmol = "modules.genmol.__main__:main"
 causalbiorl = "modules.causalbiorl.__main__:main"
 mirrorfold = "modules.mirrorfold.__main__:main"
 causaltarget = "modules.causal_target.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["causaltarget", "modules"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "causaltarget/",
+    "modules/",
+    "main.py",
+    "README.md",
+    "LICENSE",
+    "pyproject.toml",
+    "init/",
+    "docker-compose.yml",
+    "Dockerfile",
+    ".env.example",
+]
 
 [dependency-groups]
 dev = [
