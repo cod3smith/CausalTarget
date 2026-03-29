@@ -1,0 +1,58 @@
+# GenMol Default Configuration
+# ==============================
+# Hyperparameters for the Molecular VAE.
+#
+# Usage:
+#   genmol train --config configs/default.yaml
+
+# ── Data ────────────────────────────────────────────────────────────
+data:
+  max_molecules: 500000       # Max ChEMBL molecules to download
+  max_length: 120             # Max SMILES length (chars)
+  remove_stereo: true         # Strip stereochemistry (@, /, \)
+  neutralize: true            # Neutralize charges
+  augmentation: 0             # SMILES augmentation factor (0 = off)
+
+# ── Model ───────────────────────────────────────────────────────────
+model:
+  embed_dim: 64               # Token embedding dimension
+  hidden_dim: 256             # GRU hidden dimension
+  latent_dim: 128             # Latent space dimension
+  num_layers: 3               # Stacked GRU layers
+  dropout: 0.2                # Dropout between GRU layers
+
+# ── Training ────────────────────────────────────────────────────────
+training:
+  epochs: 100                 # Total training epochs
+  batch_size: 256             # Batch size
+  lr: 0.001                   # Learning rate (Adam)
+  weight_decay: 0.0           # L2 regularisation
+  grad_clip: 1.0              # Max gradient norm
+  use_amp: true               # Mixed precision (CUDA only)
+
+  # KL annealing — prevents posterior collapse
+  beta_start: 0.01            # Initial β for KL term
+  beta_end: 1.0               # Final β
+  anneal_epochs: 10           # Linear warmup epochs
+
+  # LR scheduling
+  patience: 5                 # ReduceLROnPlateau patience
+  lr_factor: 0.5              # LR reduction factor
+
+  # Checkpointing
+  save_every: 5               # Save checkpoint every N epochs
+  checkpoint_dir: "checkpoints/genmol"
+
+# ── Generation ──────────────────────────────────────────────────────
+generation:
+  temperature: 1.0            # Sampling temperature (0.5–1.5)
+  n_molecules: 1000           # Default number to generate
+
+# ── Screening ──────────────────────────────────────────────────────
+screening:
+  max_sa_score: 4.0           # Max synthetic accessibility
+  min_qed: 0.3                # Min drug-likeness (QED)
+
+# ── Evaluation ─────────────────────────────────────────────────────
+evaluation:
+  diversity_sample: 1000      # Max molecules for diversity calc
