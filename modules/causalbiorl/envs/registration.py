@@ -27,6 +27,11 @@ def register_envs() -> None:
             "entry_point": "modules.causalbiorl.envs.cell_growth:CellGrowthEnv",
             "max_episode_steps": 500,
         },
+        {
+            "id": "DrugDiscovery-v0",
+            "entry_point": "modules.causalbiorl.envs.drug_discovery:DrugDiscoveryEnv",
+            "max_episode_steps": 100,
+        },
     ]
 
     for spec in _envs:

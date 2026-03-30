@@ -202,13 +202,16 @@ class CellGrowthEnv(gym.Env):
             return None
 
         if self.render_mode == "rgb_array":
+            cur_backend = matplotlib.get_backend()
+            matplotlib.use("Agg")
             fig, axes = plt.subplots(5, 1, figsize=(9, 8), sharex=True)
             _draw(list(axes))
             fig.tight_layout()
             fig.canvas.draw()
-            data = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
-            data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+            buf = fig.canvas.buffer_rgba()
+            data = np.asarray(buf)[:, :, :3].copy()
             plt.close(fig)
+            matplotlib.use(cur_backend)
             return data
 
         return None

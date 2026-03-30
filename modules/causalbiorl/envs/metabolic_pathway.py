@@ -221,8 +221,8 @@ class MetabolicPathwayEnv(gym.Env):
             fig, ax = plt.subplots(figsize=(9, 4))
             _draw(ax)
             fig.canvas.draw()
-            data = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
-            data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+            buf = fig.canvas.buffer_rgba()
+            data = np.asarray(buf)[:, :, :3].copy()
             plt.close(fig)
             return data
 
