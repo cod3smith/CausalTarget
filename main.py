@@ -1,13 +1,13 @@
 """
-CausalTarget — Causal Drug Target Discovery
+NeoRx — Causal Drug Target Discovery
 =============================================
 
-Entry point.  For the CLI run ``causaltarget --help``.
-For the API server run ``causaltarget serve``.
+Entry point.  For the CLI run ``neorx --help``.
+For the API server run ``neorx serve``.
 
 Programmatic usage::
 
-    from causaltarget import (
+    from neorx import (
         build_disease_graph,
         identify_causal_targets,
         run_pipeline,
@@ -18,8 +18,8 @@ Programmatic usage::
 
 
 def main() -> None:
-    """Delegate to the CausalTarget CLI."""
-    from modules.causal_target.__main__ import main as cli_main
+    """Delegate to the NeoRx CLI."""
+    from modules.neorx.__main__ import main as cli_main
 
     cli_main()
 

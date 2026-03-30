@@ -1,0 +1,82 @@
+##  NeoRx — Docker Compose Infrastructure
+##  =============================================
+##
+##  Services:
+##    redis     — API response & graph caching
+##    postgres  — Graph persistence, job tracking
+##    api       — NeoRx FastAPI server
+##
+##  Usage:
+##    docker compose up -d            # Start all services
+##    docker compose up redis postgres # Persistence only (run API locally)
+##    docker compose down -v           # Tear down (including data)
+
+services:
+
+  redis:
+    image: redis:alpine
+    container_name: neorx-redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    command: >
+      redis-server
+        --appendonly yes
+        --maxmemory 512mb
+        --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:alpine
+    container_name: neorx-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-neorx}
+      POSTGRES_USER: ${POSTGRES_USER:-neorx}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-neorx}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: neorx-api
+    ports:
+      - "${API_PORT:-8000}:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      REDIS_URL: "redis://redis:6379/0"
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-neorx}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-neorx}"
+      NEORX_CACHE_BACKEND: redis
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - ./reports:/app/reports
+      - graph_cache:/app/.neorx
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+    driver: local
+  pg_data:
+    driver: local
+  graph_cache:
+    driver: local
