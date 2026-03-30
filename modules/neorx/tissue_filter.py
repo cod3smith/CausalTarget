@@ -18,19 +18,19 @@ Key design principles
 3. **Disease-type fallback** — for diseases not in the curated
    tissue map, we infer relevant tissues from the disease
    category (cancer, infectious, metabolic, etc.).
-4. **Full HPA integration** — when the Human Protein Atlas API
-   is available, we pull the COMPLETE tissue expression profile,
+4. **Full HPA integration** — we pull the COMPLETE tissue
+   expression profile from the Human Protein Atlas API,
    not just the single maximum.
 
 Data Source
 -----------
 The Human Protein Atlas (proteinatlas.org) provides tissue-level
 RNA and protein expression data for ~20,000 human genes.  We
-query the HPA API and cache results.
+query the HPA API and cache results in memory.
 
-When the HPA API is unavailable, a curated fallback map covers
-commonly studied gene families with their known expression
-tissues.
+When the HPA API is unavailable, a gene gets a 0.8 "benefit of
+the doubt" relevance score — honest about our uncertainty
+rather than pretending to know via hardcoded maps.
 """
 
 from __future__ import annotations
@@ -183,155 +183,7 @@ _TYPE_TISSUES: dict[str, list[str]] = {
 }
 
 
-# ── Curated Multi-Tissue Expression ───────────────────────────────
-#
-# For frequently studied genes, provide their FULL expression
-# profile (all tissues where they are significantly expressed),
-# not just one "primary" tissue.  This is the fallback when the
-# HPA API is unavailable.
 
-_CURATED_EXPRESSION: dict[str, list[str]] = {
-    # GABA receptors — primarily brain, some peripheral
-    "GABRA1": ["brain"], "GABRA2": ["brain"], "GABRA3": ["brain"],
-    "GABRA4": ["brain"], "GABRA5": ["brain"], "GABRA6": ["brain"],
-    "GABRB1": ["brain"], "GABRB2": ["brain"], "GABRB3": ["brain"],
-    "GABRD": ["brain"], "GABRE": ["brain"],
-    "GABRG1": ["brain"], "GABRG2": ["brain"], "GABRG3": ["brain"],
-    "GABRP": ["brain", "lung"], "GABRQ": ["brain"],
-    "GABRR1": ["brain"], "GABRR2": ["brain"],
-    # Sodium channels
-    "SCN1A": ["brain"], "SCN2A": ["brain"], "SCN3A": ["brain"],
-    "SCN4A": ["skeletal muscle"], "SCN5A": ["heart"],
-    "SCN7A": ["brain", "lung"], "SCN8A": ["brain"],
-    "SCN9A": ["dorsal root ganglia", "brain"],
-    "SCN10A": ["dorsal root ganglia"],
-    "SCN11A": ["dorsal root ganglia"],
-    # Potassium channels
-    "KCNA1": ["brain"], "KCNA2": ["brain"],
-    "KCNQ1": ["heart", "intestine"], "KCNQ2": ["brain"], "KCNQ3": ["brain"],
-    "KCNH2": ["heart", "brain"],
-    # Glutamate receptors
-    "GRIN1": ["brain"], "GRIN2A": ["brain"], "GRIN2B": ["brain"],
-    "GRIN2C": ["brain"], "GRIN2D": ["brain"],
-    "GRIN3A": ["brain"], "GRIN3B": ["brain"],
-    "GRM1": ["brain"], "GRM5": ["brain"],
-    # Dopamine receptors
-    "DRD1": ["brain"], "DRD2": ["brain"], "DRD3": ["brain"],
-    "DRD4": ["brain"], "DRD5": ["brain"],
-    # Serotonin receptors
-    "HTR1A": ["brain"], "HTR2A": ["brain"], "HTR3A": ["brain", "intestine"],
-    # Coagulation factors
-    "F2": ["liver", "blood"], "F5": ["liver", "blood"],
-    "F7": ["liver", "blood"], "F10": ["liver", "blood"],
-    "F11": ["liver", "blood"],
-    # Acute phase
-    "CRP": ["liver", "blood"], "SAA1": ["liver"], "HP": ["liver"],
-    "ORM1": ["liver"],
-    # Inflammatory cytokines — expressed broadly
-    "TNF": ["blood", "lymph node", "spleen", "liver", "lung", "brain"],
-    "IL6": ["blood", "liver", "lung", "adipose tissue", "lymph node", "brain"],
-    "IL1B": ["blood", "lymph node", "spleen", "lung", "liver"],
-    "CXCL8": ["blood", "lung", "liver", "lymph node"],
-    "IFNG": ["blood", "lymph node", "spleen"],
-    "IL10": ["blood", "lymph node", "spleen"],
-    # Immune receptors
-    "CD4": ["blood", "lymph node", "thymus", "spleen"],
-    "CD8A": ["blood", "lymph node", "thymus"],
-    # Chemokine receptors
-    "CCR5": ["blood", "lymph node", "spleen", "brain", "lung"],
-    "CXCR4": ["blood", "bone marrow", "lymph node", "brain", "lung"],
-    # Malaria-relevant
-    "GYPA": ["blood", "bone marrow"],
-    "GYPB": ["blood", "bone marrow"],
-    "GYPC": ["blood", "bone marrow"],
-    "CR1": ["blood", "kidney"],
-    "DARC": ["blood", "kidney", "endothelium"],
-    "BSG": ["blood", "brain", "liver", "kidney", "placenta"],
-    "DHFR": ["liver", "blood", "bone marrow"],
-    "DHPS": ["liver", "blood"],
-    # Ebola-relevant
-    "NPC1": ["liver", "brain", "lung", "kidney", "blood"],
-    # Cancer targets — most are broadly expressed
-    "EGFR": ["lung", "skin", "liver", "kidney", "brain", "colon",
-             "breast", "stomach", "pancreas"],
-    "ERBB2": ["breast", "lung", "stomach", "colon", "kidney",
-              "skin", "liver", "ovary", "pancreas"],
-    "ALK": ["brain", "lung", "intestine"],
-    "BRAF": ["brain", "blood", "lung", "liver", "bone marrow"],
-    "KRAS": ["lung", "colon", "pancreas", "blood", "liver"],
-    "TP53": ["blood", "liver", "lung", "brain", "kidney", "breast",
-             "colon", "pancreas", "skin"],
-    "PIK3CA": ["breast", "lung", "colon", "blood", "liver", "brain",
-               "kidney", "stomach"],
-    "BRCA1": ["breast", "ovary", "blood", "brain", "lung"],
-    "BRCA2": ["breast", "ovary", "blood", "brain", "lung"],
-    "ESR1": ["breast", "uterus", "ovary", "bone", "brain", "liver"],
-    "CDK4": ["blood", "liver", "brain", "lung", "skin"],
-    "RB1": ["blood", "liver", "brain", "lung", "bone marrow"],
-    "MET": ["liver", "lung", "kidney", "brain", "stomach"],
-    "ROS1": ["brain", "lung", "kidney", "intestine"],
-    "RET": ["brain", "thyroid", "kidney", "adrenal gland", "lung"],
-    "PTEN": ["blood", "liver", "brain", "lung", "breast", "kidney"],
-    # Metabolic targets
-    "PPARG": ["adipose tissue", "liver", "colon", "blood", "breast"],
-    "DPP4": ["pancreas", "liver", "kidney", "intestine", "blood", "lung"],
-    "GLP1R": ["pancreas", "brain", "heart", "lung", "kidney"],
-    "SLC5A2": ["kidney"],
-    "INSR": ["liver", "adipose tissue", "skeletal muscle", "brain",
-             "blood", "kidney", "pancreas"],
-    "INS": ["pancreas"],
-    "ABCC8": ["pancreas", "brain", "heart"],
-    "KCNJ11": ["pancreas", "brain", "heart"],
-    # Neurodegenerative targets
-    "PSEN1": ["brain", "blood", "liver", "kidney"],
-    "PSEN2": ["brain", "blood", "liver", "heart"],
-    "APP": ["brain", "blood", "liver", "kidney"],
-    "MAPT": ["brain"],
-    "BACE1": ["brain", "pancreas", "liver"],
-    "ACHE": ["brain", "blood", "liver", "skeletal muscle"],
-    "APOE": ["liver", "brain", "blood"],
-    "ADAM10": ["brain", "liver", "kidney", "blood"],
-    # Ubiquitous — expressed in virtually all tissues
-    "AKT1": ["blood", "liver", "lung", "brain", "kidney", "breast",
-             "colon", "pancreas", "skeletal muscle"],
-    "MTOR": ["blood", "liver", "lung", "brain", "kidney", "breast",
-             "skeletal muscle", "adipose tissue"],
-    "VEGFA": ["blood", "lung", "liver", "kidney", "brain", "placenta",
-              "endothelium"],
-    # TLRs — immune tissues
-    "TLR7": ["blood", "lymph node", "spleen", "bone marrow", "lung"],
-    "TLR9": ["blood", "lymph node", "spleen", "bone marrow"],
-    "TLR4": ["blood", "lymph node", "spleen", "lung", "liver"],
-    "TLR2": ["blood", "lymph node", "spleen", "lung"],
-    # RNA Pol subunits — ubiquitous
-    "POLR2A": ["blood", "liver", "lung", "brain", "kidney"],
-    "POLR2B": ["blood", "liver", "lung", "brain", "kidney"],
-    "POLR2D": ["blood", "liver", "lung", "brain", "kidney"],
-    "POLR2F": ["blood", "liver", "lung", "brain", "kidney"],
-    "POLR2G": ["blood", "liver", "lung", "brain", "kidney"],
-    "POLR2J": ["blood", "liver", "lung", "brain", "kidney"],
-    "POLR2K": ["blood", "liver", "lung", "brain", "kidney"],
-    "POLR2L": ["blood", "liver", "lung", "brain", "kidney"],
-    # CYP enzymes — liver + some peripheral
-    "CYP3A4": ["liver", "intestine"],
-    "CYP3A5": ["liver", "kidney", "lung", "intestine"],
-    "CYP3A7": ["liver"],
-    "CYP3A43": ["liver"],
-    # General transcription factors — ubiquitous
-    "GTF2F1": ["blood", "liver", "lung", "brain", "kidney"],
-    "GTF2F2": ["blood", "liver", "lung", "brain", "kidney"],
-    # Other commonly encountered genes
-    "ACE": ["lung", "kidney", "blood", "brain", "heart"],
-    "ACE2": ["lung", "intestine", "kidney", "heart", "liver"],
-    "TMPRSS2": ["lung", "prostate", "intestine", "kidney"],
-    "CDKN2A": ["skin", "lung", "blood", "liver", "brain"],
-    "CDH1": ["breast", "stomach", "colon", "skin", "liver", "lung"],
-    "SORL1": ["brain", "liver", "kidney"],
-    "BCHE": ["liver", "blood", "brain"],
-    "CDK5": ["brain", "blood"],
-    "APH1B": ["brain", "blood", "liver"],
-    "HMGCR": ["liver", "blood", "brain", "intestine"],
-}
 
 
 class TissueFilter:
@@ -356,24 +208,22 @@ class TissueFilter:
     def get_expression_tissues(self, gene_symbol: str) -> list[str]:
         """Return all tissues where a gene is expressed.
 
+        Uses the Human Protein Atlas API exclusively — no
+        hardcoded gene-expression maps.  This ensures the
+        system always uses real, up-to-date expression data.
+
         Tries:
-        1. In-memory cache
-        2. Curated multi-tissue fallback map
-        3. Human Protein Atlas API (if enabled)
-        4. Returns empty list if all fail (→ unknown)
+        1. In-memory cache (populated from prior API calls)
+        2. Human Protein Atlas API (live query)
+        3. Returns empty list if API fails (→ unknown,
+           which gets a 0.8 benefit-of-the-doubt score)
         """
         gene = gene_symbol.upper().strip()
 
         if gene in self._cache:
             return self._cache[gene]
 
-        # Curated map — multi-tissue
-        if gene in _CURATED_EXPRESSION:
-            tissues = _CURATED_EXPRESSION[gene]
-            self._cache[gene] = tissues
-            return tissues
-
-        # HPA API — get full profile
+        # HPA API — get full tissue expression profile
         if self._use_api:
             tissues = self._query_hpa_all_tissues(gene)
             if tissues:
@@ -542,34 +392,91 @@ class TissueFilter:
     def _query_hpa_all_tissues(self, gene: str) -> list[str]:
         """Query Human Protein Atlas for ALL expressed tissues.
 
-        Returns all tissues with nTPM > 1.0 (detectable expression),
-        sorted by expression level (highest first).
+        Uses the HPA search API which returns:
+        - ``RNA tissue specific nTPM``: dict of tissue → nTPM
+          for tissues where the gene is specifically enriched.
+        - ``RNA tissue distribution``: "Detected in all/many/some/single"
+        - ``RNA tissue cell type enrichment``: list of
+          "Tissue - CellType" strings showing per-tissue enrichment.
+
+        We combine all three sources to build the complete tissue
+        expression profile.  The gene must be an exact match
+        (first result in the search).
         """
-        url = f"https://www.proteinatlas.org/{gene}.json"
+        url = f"https://www.proteinatlas.org/search/{gene}?format=json"
         try:
             resp = requests.get(url, timeout=self._timeout)
             if resp.status_code != 200:
                 return []
 
-            data = resp.json()
-
-            # Parse RNA tissue expression — get ALL expressed tissues
-            rna = data.get("RNA tissue specific nTPM", [])
-            if not rna:
-                rna = data.get("RNA tissue overview", [])
-            if not rna:
+            results = resp.json()
+            if not results:
                 return []
 
-            expressed: list[tuple[str, float]] = []
-            for entry in rna:
-                tissue = entry.get("Tissue", entry.get("tissue", ""))
-                val = float(entry.get("Value", entry.get("nTPM", 0)))
-                if val > 1.0 and tissue:  # nTPM > 1 = detectable
-                    expressed.append((tissue.lower(), val))
+            # Find exact gene match (search returns related genes too)
+            data = None
+            for entry in results:
+                if entry.get("Gene", "").upper() == gene.upper():
+                    data = entry
+                    break
+            if data is None:
+                return []
+
+            tissues: dict[str, float] = {}
+
+            # Source 1: RNA tissue specific nTPM — dict of tissue:nTPM
+            ntpm = data.get("RNA tissue specific nTPM")
+            if isinstance(ntpm, dict):
+                for tissue, val in ntpm.items():
+                    try:
+                        tissues[tissue.lower()] = float(val)
+                    except (ValueError, TypeError):
+                        tissues[tissue.lower()] = 1.0
+
+            # Source 2: RNA tissue cell type enrichment — list of
+            #   "Tissue - CellType" strings
+            enrichment = data.get("RNA tissue cell type enrichment", [])
+            if isinstance(enrichment, list):
+                for entry_str in enrichment:
+                    if isinstance(entry_str, str) and " - " in entry_str:
+                        tissue = entry_str.split(" - ")[0].strip().lower()
+                        if tissue and tissue not in tissues:
+                            tissues[tissue] = 1.0  # present but no nTPM
+
+            # Source 3: RNA tissue distribution — infer breadth
+            distribution = data.get("RNA tissue distribution", "")
+
+            # For ubiquitously expressed genes ("Detected in all"),
+            # add common systemic tissues so they don't get penalised
+            if distribution == "Detected in all":
+                systemic = [
+                    "blood", "liver", "lung", "kidney", "brain",
+                    "lymph node", "bone marrow", "spleen", "heart",
+                    "intestine", "skin", "pancreas", "breast",
+                    "colon", "stomach", "adipose tissue",
+                    "skeletal muscle", "thyroid gland", "prostate",
+                    "ovary", "adrenal gland",
+                ]
+                for t in systemic:
+                    if t not in tissues:
+                        tissues[t] = 0.5  # ubiquitous baseline
+            elif distribution == "Detected in many":
+                systemic = [
+                    "blood", "liver", "lung", "kidney", "brain",
+                    "lymph node", "bone marrow", "spleen",
+                ]
+                for t in systemic:
+                    if t not in tissues:
+                        tissues[t] = 0.5
+
+            if not tissues:
+                return []
 
             # Sort by expression level, return tissue names
-            expressed.sort(key=lambda x: x[1], reverse=True)
-            return [t for t, _ in expressed]
+            sorted_tissues = sorted(
+                tissues.items(), key=lambda x: x[1], reverse=True,
+            )
+            return [t for t, _ in sorted_tissues]
 
         except Exception as exc:
             logger.debug("HPA query failed for %s: %s", gene, exc)

@@ -214,7 +214,7 @@ class NeoRxResult(BaseModel):
 
     # Biological classification (scientific-rigor layer)
     target_type: str = Field("", description="TargetType from classifier (e.g. HOST_SYMPTOM, PATHOGEN_DIRECT)")
-    tissue_relevant: bool = Field(True, description="Is the gene expressed in disease-relevant tissue?")
+    tissue_relevant: float = Field(1.0, description="Tissue relevance score 0.0–1.0 from HPA expression data")
     tissue_explanation: str = Field("", description="Why tissue is or is not relevant")
     counterfactual_effect: float | None = Field(None, description="Pearl's counterfactual ΔY")
     evidence_streams: int = Field(0, description="Number of independent evidence streams supporting this target")
