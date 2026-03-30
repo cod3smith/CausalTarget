@@ -290,7 +290,7 @@ def _build_html(
   </div>
 
   <footer>
-    CausalTarget · DockBot · NeoForge
+    NeoRx · DockBot · NeoForge
   </footer>
 </body>
 </html>"""

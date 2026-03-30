@@ -5,7 +5,7 @@ DockBot Data Models
 Pydantic models for molecular docking data.
 
 All models are JSON-serialisable for seamless integration with the FastAPI
-layer and downstream pipeline modules (GenMol, CausalTarget).
+layer and downstream pipeline modules (GenMol, NeoRx).
 
 Key biology concepts
 --------------------

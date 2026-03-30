@@ -206,10 +206,12 @@ def mol_to_pdbqt_string(mol: Chem.Mol) -> str:
 
         return "\n".join(pdbqt_strings)
 
-    except ImportError:
+    except ImportError as exc:
         logger.warning(
-            "Meeko not installed — using basic PDB→PDBQT fallback. "
-            "Install meeko for proper ligand preparation: pip install meeko"
+            "Meeko import failed: %s — using basic PDB→PDBQT fallback. "
+            "Ensure meeko and its dependencies are installed: "
+            "pip install meeko gemmi",
+            exc,
         )
         return _basic_mol_to_pdbqt(mol)
 
