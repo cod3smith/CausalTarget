@@ -72,11 +72,11 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/NeoForge/NeoRx"
-Documentation = "https://github.com/NeoForge/NeoRx#readme"
-Repository = "https://github.com/NeoForge/NeoRx"
-Issues = "https://github.com/NeoForge/NeoRx/issues"
-Changelog = "https://github.com/NeoForge/NeoRx/blob/main/CHANGELOG.md"
+Homepage = "https://github.com/cod3smith/neorx"
+Documentation = "https://github.com/cod3smith/neorx#readme"
+Repository = "https://github.com/cod3smith/neorx"
+Issues = "https://github.com/cod3smith/neorx/issues"
+Changelog = "https://github.com/cod3smith/neorx/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 docking = ["vina>=1.2"]
