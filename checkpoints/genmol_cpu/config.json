@@ -1,0 +1,15 @@
+{
+  "lr": 0.001,
+  "weight_decay": 0.0,
+  "grad_clip": 1.0,
+  "beta_start": 0.01,
+  "beta_end": 1.0,
+  "anneal_epochs": 10,
+  "epochs": 10,
+  "patience": 5,
+  "lr_factor": 0.5,
+  "save_every": 2,
+  "checkpoint_dir": "checkpoints/genmol_cpu",
+  "use_amp": true,
+  "log_every": 100
+}
