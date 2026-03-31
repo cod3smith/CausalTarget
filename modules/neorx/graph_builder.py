@@ -3,12 +3,13 @@ Disease Causal Graph Builder
 =============================
 
 The graph builder is the first major step in the NeoRx
-pipeline.  It queries all 7 biomedical data sources and assembles
+pipeline.  It queries all 8 biomedical data sources and assembles
 a unified **causal knowledge graph** for a specific disease.
 
 Architecture
 ------------
 1. Query gene–disease associations (Monarch Initiative, Open Targets)
+1b. Query validated drug targets (ChEMBL — human + pathogen)
 2. Query pathway memberships (KEGG, Reactome)
 3. Query protein–protein interactions (STRING)
 4. Enrich proteins with UniProt metadata (function, PDB IDs)
@@ -57,6 +58,7 @@ from .data_sources import (
     query_string_interactions,
     query_uniprot,
     query_pdb_structures,
+    query_chembl,
 )
 from .cache import get_cache, _cache_key, GRAPH_TTL
 
@@ -141,6 +143,26 @@ def build_disease_graph(
     sources_queried.append("OpenTargets")
     logger.info("  Open Targets: %d nodes, %d edges.", len(ot_nodes), len(ot_edges))
 
+    # ── Step 1b: ChEMBL Drug Targets (local SQLite) ────────────
+
+    logger.info("Querying ChEMBL for '%s'…", disease)
+    chembl_nodes, chembl_edges = query_chembl(
+        disease, max_results=max_genes * 3,
+        allow_mocks=allow_mocks,
+    )
+    all_nodes.extend(chembl_nodes)
+    all_edges.extend(chembl_edges)
+    if chembl_nodes:
+        sources_queried.append("ChEMBL")
+    n_pathogen = sum(
+        1 for n in chembl_nodes
+        if n.metadata.get("is_pathogen_target")
+    )
+    logger.info(
+        "  ChEMBL: %d nodes (%d pathogen), %d edges.",
+        len(chembl_nodes), n_pathogen, len(chembl_edges),
+    )
+
     # Resolve disease ontology ID from Open Targets
     try:
         from .data_sources.open_targets import resolve_disease_id
@@ -223,7 +245,7 @@ def build_disease_graph(
         if e.edge_type == EdgeType.ASSOCIATED_WITH
     }
     for node in merged_nodes:
-        if node.node_type in (NodeType.GENE, NodeType.PROTEIN):
+        if node.node_type in (NodeType.GENE, NodeType.PROTEIN, NodeType.PATHOGEN_GENE):
             pair = (node.node_id, disease_node.node_id)
             if pair not in existing_disease_edges:
                 merged_edges.append(GraphEdge(

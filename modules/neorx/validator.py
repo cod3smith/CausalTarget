@@ -88,6 +88,9 @@ GROUND_TRUTH: dict[str, dict[str, Any]] = {
              "mechanism": "HIV-1 co-receptor (X4-tropic strains)"},
             {"gene": "CD4", "drug": "ibalizumab", "organism": "H. sapiens",
              "mechanism": "Primary HIV receptor — blocks gp120 binding"},
+            {"gene": "POL", "drug": "efavirenz/dolutegravir/darunavir",
+             "organism": "HIV-1",
+             "mechanism": "Pol polyprotein (protease/RT/integrase) — target of 26+ FDA-approved antiretrovirals"},
         ],
         "known_false_targets": [
             {"gene": "TNF", "reason": "Inflammatory marker — consequence of immune activation"},
@@ -170,6 +173,8 @@ GROUND_TRUTH: dict[str, dict[str, Any]] = {
         "known_targets": [
             {"gene": "NPC1", "drug": "U18666A", "organism": "H. sapiens",
              "mechanism": "Niemann-Pick C1 — required for Ebola viral entry"},
+            {"gene": "GP", "drug": "ansuvimab/mAb114", "organism": "Zaire ebolavirus",
+             "mechanism": "Envelope glycoprotein — FDA-approved monoclonal antibody target (Ebanga)"},
         ],
         "known_false_targets": [
             {"gene": "TNF", "reason": "Cytokine storm marker — consequence of infection"},
@@ -177,6 +182,69 @@ GROUND_TRUTH: dict[str, dict[str, Any]] = {
         ],
     },
 }
+
+
+# ── Fuzzy Gene-Name Matching ────────────────────────────────────────
+#
+# Pathogen targets from ChEMBL often have compound gene names
+# (e.g. "DHFR-TS" for bifunctional dihydrofolate reductase-
+# thymidylate synthase) or prefixed names ("PPPK-DHPS").
+# The ground truth uses the short canonical form ("DHFR", "DHPS").
+#
+# These helpers do token-aware matching: split on "-" and check
+# whether any token of the identified name matches a ground truth
+# entry, or vice versa.
+
+def _gene_tokens(name: str) -> set[str]:
+    """Split a gene name on '-' and '/' to get matchable tokens."""
+    return {t for t in name.replace("/", "-").split("-") if t}
+
+
+def _fuzzy_match(
+    identified: set[str], reference: set[str],
+) -> set[str]:
+    """Return the subset of *identified* that match *reference*.
+
+    A match occurs if:
+    - Exact match (CCR5 == CCR5)
+    - Any token of the identified name matches a reference entry
+      (DHFR-TS → DHFR matches reference DHFR)
+    - Any token of a reference entry matches the identified name
+      (ground truth DHFR matches identified DHFR)
+    """
+    matched: set[str] = set()
+    for ident in identified:
+        if ident in reference:
+            matched.add(ident)
+            continue
+        # Check if any token of ident matches a reference gene
+        ident_tokens = _gene_tokens(ident)
+        for ref in reference:
+            if ref in ident_tokens:
+                matched.add(ident)
+                break
+    return matched
+
+
+def _fuzzy_match_reverse(
+    ground_truth: set[str], identified: set[str],
+) -> set[str]:
+    """Return the subset of *ground_truth* that are found in *identified*.
+
+    Used for calculating FN: a ground truth gene is "found" if
+    any identified gene matches it (exact or token-based).
+    """
+    found: set[str] = set()
+    for gt in ground_truth:
+        if gt in identified:
+            found.add(gt)
+            continue
+        # Check if any identified gene contains this GT as a token
+        for ident in identified:
+            if gt in _gene_tokens(ident):
+                found.add(gt)
+                break
+    return found
 
 
 class KnownTargetValidator:
@@ -241,9 +309,14 @@ class KnownTargetValidator:
         }
 
         # Metrics against known targets only
-        tp = identified_causal & true_target_genes
-        fp_known = identified_causal & false_target_genes
-        fn = true_target_genes - all_identified  # Not identified at all
+        # Use token-aware matching for compound names
+        # e.g. "DHFR-TS" matches ground truth "DHFR",
+        #      "PPPK-DHPS" matches ground truth "DHPS"
+        tp = _fuzzy_match(identified_causal, true_target_genes)
+        fp_known = _fuzzy_match(identified_causal, false_target_genes)
+        fn = true_target_genes - _fuzzy_match_reverse(
+            true_target_genes, all_identified
+        )
 
         n_identified = len(identified_causal)
         precision = len(tp) / n_identified if n_identified > 0 else 0.0
