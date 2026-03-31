@@ -1,0 +1,111 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version bump type"
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      prerelease:
+        description: "Pre-release label (leave empty for stable)"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Get current version
+        id: current
+        run: |
+          version=$(python -c "import re; print(re.search(r'version\s*=\s*\"(.+?)\"', open('pyproject.toml').read()).group(1))")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Current version: $version"
+
+      - name: Compute next version
+        id: next
+        run: |
+          current="${{ steps.current.outputs.version }}"
+          bump="${{ inputs.bump }}"
+          pre="${{ inputs.prerelease }}"
+
+          # Strip any existing pre-release suffix
+          base=$(echo "$current" | sed 's/-.*//')
+          IFS='.' read -r major minor patch <<< "$base"
+
+          case "$bump" in
+            major) major=$((major + 1)); minor=0; patch=0 ;;
+            minor) minor=$((minor + 1)); patch=0 ;;
+            patch) patch=$((patch + 1)) ;;
+          esac
+
+          if [ -n "$pre" ]; then
+            next="${major}.${minor}.${patch}-${pre}"
+          else
+            next="${major}.${minor}.${patch}"
+          fi
+
+          echo "version=$next" >> "$GITHUB_OUTPUT"
+          echo "Next version: $next"
+
+      - name: Update version in pyproject.toml
+        run: |
+          sed -i "s/^version = \".*\"/version = \"${{ steps.next.outputs.version }}\"/" pyproject.toml
+
+      - name: Update version in neorx/__init__.py
+        run: |
+          sed -i "s/^__version__ = \".*\"/__version__ = \"${{ steps.next.outputs.version }}\"/" neorx/__init__.py
+
+      - name: Update version in CITATION.cff
+        run: |
+          sed -i "s/^version: .*/version: ${{ steps.next.outputs.version }}/" CITATION.cff
+
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pyproject.toml neorx/__init__.py CITATION.cff
+          git commit -m "chore: bump version to ${{ steps.next.outputs.version }}"
+          git push
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version="v${{ steps.next.outputs.version }}"
+          if [ -n "${{ inputs.prerelease }}" ]; then
+            gh release create "$version" \
+              --title "$version" \
+              --generate-notes \
+              --prerelease
+          else
+            gh release create "$version" \
+              --title "$version" \
+              --generate-notes
+          fi
+
+      - name: Summary
+        run: |
+          echo "## Release v${{ steps.next.outputs.version }}" >> "$GITHUB_SUMMARY"
+          echo "" >> "$GITHUB_SUMMARY"
+          echo "- Bumped from \`${{ steps.current.outputs.version }}\` → \`${{ steps.next.outputs.version }}\`" >> "$GITHUB_SUMMARY"
+          echo "- GitHub Release created → triggers \`publish.yml\` → publishes to PyPI" >> "$GITHUB_SUMMARY"
